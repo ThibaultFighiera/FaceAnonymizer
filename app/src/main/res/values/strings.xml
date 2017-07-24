@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">FaceAnonymizer</string>
+    <string name="loading">Chargement. Patientez&#8230;</string>
+
+    <plurals name="faces">
+        <item quantity="one"> "%d visage detecté"</item>
+        <item quantity="other">"%d visages detectés"</item>
+    </plurals>
+</resources>
