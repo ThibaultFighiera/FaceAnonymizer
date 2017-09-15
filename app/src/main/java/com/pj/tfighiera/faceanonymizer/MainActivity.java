@@ -1,41 +1,28 @@
 package com.pj.tfighiera.faceanonymizer;
 
-import com.pj.tfighiera.faceanonymizer.tasks.AnonymizerTask;
-import com.pj.tfighiera.faceanonymizer.tasks.FaceDetectionTask;
+import com.pj.tfighiera.faceanonymizer.model.ImageModel;
+import com.pj.tfighiera.faceanonymizer.presenter.tasks.AnonymizerTask;
+import com.pj.tfighiera.faceanonymizer.presenter.tasks.FaceDetectionTask;
 
-import android.app.ProgressDialog;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.drawable.BitmapDrawable;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Bundle;
-import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.view.View;
-import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.TextView;
 
-public class MainActivity extends AppCompatActivity implements AnonymizerTask.AnonymizerDelegate, FaceDetectionTask.FaceDetectionDelegate
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+
+public class MainActivity extends AppCompatActivity implements MainPresenter.Delegate
 {
 	private static final int REQUEST_IMAGE_CAPTURE = 1234;
-	private static final String SAVED_PHOTO = "saved-photo";
-	public static final String SAVED_FACE_COUNT = "saved-face-count";
-	@Nullable
-	Bitmap mBitmap;
 	@Nullable
 	AnonymizerTask mAnonymizerTask;
 	@NonNull
-	private ImageView mImageView;
-	@NonNull
-	private TextView mTitleView;
-	@NonNull
-	private Button mProcessButton;
-	private int mCount;
-	@Nullable
-	private ProgressDialog mDialog;
+	private MainPresenter mMainPresenter;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -43,46 +30,10 @@ public class MainActivity extends AppCompatActivity implements AnonymizerTask.An
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
-
-		mTitleView = (TextView) findViewById(R.id.title);
-		mImageView = (ImageView) findViewById(R.id.imgview);
-		mImageView.setOnClickListener(new View.OnClickListener()
-		{
-			@Override
-			public void onClick(View view)
-			{
-				Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-				if (takePictureIntent.resolveActivity(getPackageManager()) != null)
-				{
-					startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
-				}
-			}
-		});
-
-		mProcessButton = (Button) findViewById(R.id.button);
-		mProcessButton.setOnClickListener(new View.OnClickListener()
-		{
-			@Override
-			public void onClick(View v)
-			{
-				if (mBitmap != null)
-				{
-					showLoadingDialog();
-					mAnonymizerTask = new AnonymizerTask(MainActivity.this, MainActivity.this);
-					mAnonymizerTask.execute(mBitmap);
-				}
-			}
-		});
-
+		mMainPresenter = new MainPresenter(this, this);
 		if (savedInstanceState != null)
 		{
 			restoreValues(savedInstanceState);
-
-			if (mBitmap != null)
-			{
-				mImageView.setImageBitmap(mBitmap);
-				setCountView(mCount);
-			}
 		}
 	}
 
@@ -90,14 +41,12 @@ public class MainActivity extends AppCompatActivity implements AnonymizerTask.An
 	protected void onSaveInstanceState(Bundle outState)
 	{
 		super.onSaveInstanceState(outState);
-		outState.putParcelable(SAVED_PHOTO, mBitmap);
-		outState.putInt(SAVED_FACE_COUNT, mCount);
+		mMainPresenter.save(outState);
 	}
 
 	private void restoreValues(Bundle savedInstanceState)
 	{
-		setBitmap((Bitmap) savedInstanceState.getParcelable(SAVED_PHOTO));
-		mCount = savedInstanceState.getInt(SAVED_FACE_COUNT);
+		mMainPresenter.restore(savedInstanceState);
 	}
 
 	private void cancelTask()
@@ -112,8 +61,8 @@ public class MainActivity extends AppCompatActivity implements AnonymizerTask.An
 	@Override
 	protected void onDestroy()
 	{
+		mMainPresenter.destroy();
 		cancelTask();
-		stopLoadingDialog();
 		super.onDestroy();
 	}
 
@@ -122,55 +71,54 @@ public class MainActivity extends AppCompatActivity implements AnonymizerTask.An
 	{
 		if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK)
 		{
-			Bundle extras = data.getExtras();
-			Bitmap imageBitmap = (Bitmap) extras.get("data");
+			Uri imageUri = data.getData();
+			ImageModel model = extractModel(imageUri);
 
-			if (imageBitmap != null)
+			if (model != null && model.getBitmap() != null)
 			{
-				setBitmap(imageBitmap);
-				mImageView.setImageBitmap(imageBitmap);
-				showLoadingDialog();
-				new FaceDetectionTask(MainActivity.this, MainActivity.this).execute(imageBitmap);
+				mMainPresenter.updateModel(model);
+				mMainPresenter.OnStartFaceDetection();
+				new FaceDetectionTask(MainActivity.this, mMainPresenter).execute(model.getBitmap());
 			}
 		}
 	}
 
-	@Override
-	public void onAnonymizationSuccess(@NonNull Bitmap mask)
+	@Nullable
+	private ImageModel extractModel(@Nullable Uri imageUri)
 	{
-		mImageView.setImageDrawable(new BitmapDrawable(getResources(), mask));
-		stopLoadingDialog();
-	}
-
-	@Override
-	public void onFaceDetected(int count)
-	{
-		mCount = count;
-		setCountView(count);
-		stopLoadingDialog();
-	}
-
-	private void setCountView(int count)
-	{
-		mTitleView.setText(getResources().getQuantityString(R.plurals.faces, count, count));
-	}
-
-	private void setBitmap(@Nullable Bitmap bitmap)
-	{
-		mBitmap = bitmap;
-		mProcessButton.setEnabled(bitmap != null);
-	}
-
-	private void showLoadingDialog()
-	{
-		mDialog = ProgressDialog.show(MainActivity.this, "", getString(R.string.loading), true);
-	}
-
-	private void stopLoadingDialog()
-	{
-		if (mDialog != null)
+		if (imageUri != null)
 		{
-			mDialog.cancel();
+			try
+			{
+				InputStream imageStream = getContentResolver().openInputStream(imageUri);
+				return new ImageModel(imageUri, BitmapFactory.decodeStream(imageStream));
+			}
+			catch (FileNotFoundException e)
+			{
+				e.printStackTrace();
+			}
 		}
+		return null;
+	}
+
+	@Override
+	public void startPhotoPicker()
+	{
+		Intent photoPickerIntent = new Intent(Intent.ACTION_PICK);
+		photoPickerIntent.setType("image/*");
+		startActivityForResult(photoPickerIntent, REQUEST_IMAGE_CAPTURE);
+	}
+
+	@Override
+	public void startDetectionTask(@NonNull ImageModel model)
+	{
+		new FaceDetectionTask(this, mMainPresenter).execute(model.getBitmap());
+	}
+
+	@Override
+	public void anonymizePhoto(@NonNull ImageModel model)
+	{
+		mAnonymizerTask = new AnonymizerTask(MainActivity.this, mMainPresenter);
+		mAnonymizerTask.execute(model.getBitmap());
 	}
 }

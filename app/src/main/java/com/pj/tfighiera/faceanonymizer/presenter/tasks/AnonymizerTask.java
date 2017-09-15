@@ -1,7 +1,8 @@
-package com.pj.tfighiera.faceanonymizer.tasks;
+package com.pj.tfighiera.faceanonymizer.presenter.tasks;
 
 import com.google.android.gms.vision.face.Face;
 
+import com.pj.tfighiera.faceanonymizer.App;
 import com.pj.tfighiera.faceanonymizer.helpers.Blurrer;
 import com.pj.tfighiera.faceanonymizer.helpers.FaceDetectorHelper;
 
@@ -24,15 +25,12 @@ import java.lang.ref.WeakReference;
 public class AnonymizerTask extends AsyncTask<Bitmap, Void, Bitmap>
 {
 	@NonNull
-	private final Context mContext;
-	@NonNull
 	private final FaceDetectorHelper mFaceDetector;
 	@Nullable
 	private final WeakReference<AnonymizerDelegate> mAnonymizerDelegate;
 
 	public AnonymizerTask(@NonNull Context context, @Nullable AnonymizerDelegate anonymizerDelegate)
 	{
-		mContext = context;
 		mAnonymizerDelegate = new WeakReference<>(anonymizerDelegate);
 		mFaceDetector = new FaceDetectorHelper(context);
 	}
@@ -48,11 +46,11 @@ public class AnonymizerTask extends AsyncTask<Bitmap, Void, Bitmap>
 			for (int i = 0; i < faces.size(); i++)
 			{
 				Face face = faces.valueAt(i);
-				Blurrer blurrer = new Blurrer.BlurrerBuilder(originalImage).setPosition(face.getPosition())
-				                                                           .setWidth(face.getWidth())
-				                                                           .setHeight(face.getHeight())
-				                                                           .build();
-				masksCanvas.drawBitmap(blurrer.createBlurMask(context), face.getPosition().x, face.getPosition().y, null);
+				Blurrer.BlurrerBuilder blurrer = new Blurrer.BlurrerBuilder(originalImage).setPosition(face.getPosition())
+				                                                                          .setWidth(face.getWidth())
+				                                                                          .setHeight(face.getHeight());
+				masksCanvas.drawBitmap(blurrer.build()
+				                              .createBlurMask(context), face.getPosition().x, face.getPosition().y, null);
 			}
 		}
 		return maskedBitmap;
@@ -66,7 +64,7 @@ public class AnonymizerTask extends AsyncTask<Bitmap, Void, Bitmap>
 			return bitmaps[0];
 		}
 		SparseArray<Face> faces = mFaceDetector.detect(bitmaps[0]);
-		return createFaceMask(mContext, faces, bitmaps[0]);
+		return createFaceMask(App.getContext(), faces, bitmaps[0]);
 	}
 
 	@Override

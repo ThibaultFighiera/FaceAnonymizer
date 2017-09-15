@@ -1,6 +1,8 @@
 <resources>
     <string name="app_name">FaceAnonymizer</string>
     <string name="loading">Chargement. Patientez&#8230;</string>
+    <string name="reset">Reset</string>
+    <string name="process">Process</string>
 
     <plurals name="faces">
         <item quantity="one"> "%d visage detecté"</item>

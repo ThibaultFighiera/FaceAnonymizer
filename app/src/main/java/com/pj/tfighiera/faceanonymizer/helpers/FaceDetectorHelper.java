@@ -25,6 +25,7 @@ public class FaceDetectorHelper
 		mFaceDetector = new FaceDetector.Builder(context).setMode(FaceDetector.ACCURATE_MODE)
 		                                                 .setLandmarkType(FaceDetector.ALL_LANDMARKS)
 		                                                 .setTrackingEnabled(false)
+		                                                 .setMinFaceSize(0f)
 		                                                 .build();
 	}
 

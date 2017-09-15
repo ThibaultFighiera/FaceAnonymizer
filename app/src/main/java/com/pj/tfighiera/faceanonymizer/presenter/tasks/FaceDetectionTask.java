@@ -1,4 +1,4 @@
-package com.pj.tfighiera.faceanonymizer.tasks;
+package com.pj.tfighiera.faceanonymizer.presenter.tasks;
 
 import com.pj.tfighiera.faceanonymizer.helpers.FaceDetectorHelper;
 

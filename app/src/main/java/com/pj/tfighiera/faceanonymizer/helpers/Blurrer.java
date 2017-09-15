@@ -17,13 +17,15 @@ import android.support.annotation.NonNull;
  */
 public class Blurrer
 {
-	private static final int BLUR_RADIUS = 25;
+	private static final int MAX_BLUR = 25;
+	private static final int DEFAULT_BLUR = 200;
 	private final int mWidth;
 	private final int mHeight;
 	@NonNull
 	private final Point mPosition;
 	@NonNull
 	private final Bitmap mBitMap;
+	private int mBlurRadius;
 
 	private Blurrer(@NonNull BlurrerBuilder builder)
 	{
@@ -31,23 +33,38 @@ public class Blurrer
 		mWidth = builder.mWidth;
 		mHeight = builder.mHeight;
 		mPosition = builder.mPosition;
+		mBlurRadius = builder.mBlurRadius;
 	}
 
 	@NonNull
-	public Bitmap createBlurMask(Context context)
+	public Bitmap createBlurMask(final Context context)
 	{
 		Bitmap outputBitmap = Bitmap.createBitmap(mBitMap, mPosition.x, mPosition.y, mWidth, mHeight);
 		final RenderScript renderScript = RenderScript.create(context);
-		Allocation tmpIn = Allocation.createFromBitmap(renderScript, outputBitmap);
-		Allocation tmpOut = Allocation.createFromBitmap(renderScript, outputBitmap);
 
+		mBlurRadius = (int) (mHeight / (float) mBitMap.getHeight() * mBitMap.getDensity());
 		//Intrinsic Gausian createBlurMask filter
+		int times = mBlurRadius / MAX_BLUR;
+		for (int i = 0; i < times; i++)
+		{
+			blurImage(outputBitmap, renderScript, MAX_BLUR);
+		}
+		if (mBlurRadius % MAX_BLUR > 0)
+		{
+			blurImage(outputBitmap, renderScript, mBlurRadius % MAX_BLUR);
+		}
+		return outputBitmap;
+	}
+
+	private void blurImage(Bitmap bitmap, RenderScript renderScript, int blurRadius)
+	{
+		Allocation tmpIn = Allocation.createFromBitmap(renderScript, bitmap, Allocation.MipmapControl.MIPMAP_NONE, Allocation.USAGE_SCRIPT);
+		Allocation tmpOut = Allocation.createTyped(renderScript, tmpIn.getType());
 		ScriptIntrinsicBlur intrinsicBlur = ScriptIntrinsicBlur.create(renderScript, Element.U8_4(renderScript));
-		intrinsicBlur.setRadius(BLUR_RADIUS);
+		intrinsicBlur.setRadius(blurRadius);
 		intrinsicBlur.setInput(tmpIn);
 		intrinsicBlur.forEach(tmpOut);
-		tmpOut.copyTo(outputBitmap);
-		return outputBitmap;
+		tmpOut.copyTo(bitmap);
 	}
 
 	public static class BlurrerBuilder
@@ -57,6 +74,7 @@ public class Blurrer
 		private Point mPosition;
 		private int mWidth;
 		private int mHeight;
+		private int mBlurRadius = DEFAULT_BLUR;
 
 		public BlurrerBuilder(@NonNull Bitmap bitmap)
 		{
