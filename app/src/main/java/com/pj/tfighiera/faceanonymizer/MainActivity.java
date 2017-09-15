@@ -5,16 +5,11 @@ import com.pj.tfighiera.faceanonymizer.presenter.tasks.AnonymizerTask;
 import com.pj.tfighiera.faceanonymizer.presenter.tasks.FaceDetectionTask;
 
 import android.content.Intent;
-import android.graphics.BitmapFactory;
-import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-
-import java.io.FileNotFoundException;
-import java.io.InputStream;
 
 public class MainActivity extends AppCompatActivity implements MainPresenter.Delegate
 {
@@ -46,7 +41,7 @@ public class MainActivity extends AppCompatActivity implements MainPresenter.Del
 
 	private void restoreValues(Bundle savedInstanceState)
 	{
-		mMainPresenter.restore(savedInstanceState);
+		mMainPresenter.restore(this, savedInstanceState);
 	}
 
 	private void cancelTask()
@@ -71,34 +66,11 @@ public class MainActivity extends AppCompatActivity implements MainPresenter.Del
 	{
 		if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK)
 		{
-			Uri imageUri = data.getData();
-			ImageModel model = extractModel(imageUri);
-
-			if (model != null && model.getBitmap() != null)
-			{
-				mMainPresenter.updateModel(model);
-				mMainPresenter.OnStartFaceDetection();
-				new FaceDetectionTask(MainActivity.this, mMainPresenter).execute(model.getBitmap());
-			}
+			ImageModel model = new ImageModel(this, data.getData());
+			mMainPresenter.updateModel(model);
+			mMainPresenter.OnStartFaceDetection();
+			new FaceDetectionTask(MainActivity.this, mMainPresenter).execute(model.getBitmap());
 		}
-	}
-
-	@Nullable
-	private ImageModel extractModel(@Nullable Uri imageUri)
-	{
-		if (imageUri != null)
-		{
-			try
-			{
-				InputStream imageStream = getContentResolver().openInputStream(imageUri);
-				return new ImageModel(imageUri, BitmapFactory.decodeStream(imageStream));
-			}
-			catch (FileNotFoundException e)
-			{
-				e.printStackTrace();
-			}
-		}
-		return null;
 	}
 
 	@Override

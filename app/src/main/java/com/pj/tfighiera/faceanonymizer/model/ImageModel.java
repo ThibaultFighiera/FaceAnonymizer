@@ -1,5 +1,8 @@
 package com.pj.tfighiera.faceanonymizer.model;
 
+import com.pj.tfighiera.faceanonymizer.helpers.ImageUtils;
+
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
@@ -24,15 +27,13 @@ public class ImageModel
 	private Uri mImageUri;
 	private int mCount;
 
-	public ImageModel()
+	public ImageModel(@NonNull Context context, @Nullable Uri imageUri)
 	{
-
-	}
-
-	public ImageModel(@NonNull Uri imageUri, @NonNull Bitmap bitmap)
-	{
-		mBitmap = bitmap;
-		mImageUri = imageUri;
+		if(imageUri != null)
+		{
+			mImageUri = imageUri;
+			mBitmap = ImageUtils.openBitmap(context, imageUri);
+		}
 	}
 
 	public int getWidth()
@@ -66,14 +67,22 @@ public class ImageModel
 		outState.putInt(SAVED_FACE_COUNT, mCount);
 	}
 
-	public void restore(Bundle savedInstanceState)
+	@NonNull
+	public static ImageModel restore(Context context, Bundle savedInstanceState)
 	{
-		mBitmap = savedInstanceState.getParcelable(SAVED_PHOTO);
-		mCount = savedInstanceState.getInt(SAVED_FACE_COUNT);
+		Uri imageUri = savedInstanceState.getParcelable(SAVED_PHOTO);
+		ImageModel imageModel = new ImageModel(context, imageUri);
+		imageModel.mCount = savedInstanceState.getInt(SAVED_FACE_COUNT);
+		return imageModel;
 	}
 
 	public int getCount()
 	{
 		return mCount;
+	}
+
+	public void setCount(int count)
+	{
+		mCount = count;
 	}
 }

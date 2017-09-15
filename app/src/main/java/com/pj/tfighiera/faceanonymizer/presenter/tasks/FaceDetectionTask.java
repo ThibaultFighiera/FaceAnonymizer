@@ -31,8 +31,11 @@ public class FaceDetectionTask extends AsyncTask<Bitmap, Void, Integer>
 	@Override
 	protected Integer doInBackground(Bitmap... bitmaps)
 	{
-		return mFaceDetector.detect(bitmaps[0])
-		                    .size();
+		Bitmap bitmap = bitmaps[0];
+		return bitmap == null
+		       ? 0
+		       : mFaceDetector.detect(bitmap)
+		                      .size();
 	}
 
 	@Override

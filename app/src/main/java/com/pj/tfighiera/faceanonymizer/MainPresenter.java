@@ -131,6 +131,7 @@ public class MainPresenter implements FaceDetectionTask.FaceDetectionDelegate, A
 	public void onFaceDetected(int count)
 	{
 		setCountView(count);
+		mImageModel.setCount(count);
 		hideLoadingDialog();
 	}
 
@@ -168,11 +169,9 @@ public class MainPresenter implements FaceDetectionTask.FaceDetectionDelegate, A
 		}
 	}
 
-	public void restore(@NonNull Bundle savedInstanceState)
+	public void restore(@NonNull Context context, @NonNull Bundle savedInstanceState)
 	{
-		mImageModel = new ImageModel();
-		mImageModel.restore(savedInstanceState);
-		updateModel(mImageModel);
+		updateModel(ImageModel.restore(context, savedInstanceState));
 	}
 
 	interface Delegate
