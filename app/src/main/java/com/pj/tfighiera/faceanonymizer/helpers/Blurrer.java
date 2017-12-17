@@ -11,6 +11,8 @@ import android.renderscript.ScriptIntrinsicBlur;
 import android.support.annotation.NonNull;
 
 /**
+ * Blur part of an image
+ *
  * created on 21/07/2017
  *
  * @author tfi

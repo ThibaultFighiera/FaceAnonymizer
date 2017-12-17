@@ -1,6 +1,6 @@
 package com.pj.tfighiera.faceanonymizer.presenter.tasks;
 
-import com.pj.tfighiera.faceanonymizer.helpers.FaceDetectorHelper;
+import com.pj.tfighiera.faceanonymizer.helpers.FaceDetectorFacade;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -11,21 +11,24 @@ import android.support.annotation.Nullable;
 import java.lang.ref.WeakReference;
 
 /**
+ * Detection task allowing to count how many faces where found
+ *
  * created on 21/07/2017
  *
  * @author tfi
+ * @version 1.0
  */
 public class FaceDetectionTask extends AsyncTask<Bitmap, Void, Integer>
 {
 	@Nullable
 	private final WeakReference<FaceDetectionDelegate> mDelegate;
 	@NonNull
-	private final FaceDetectorHelper mFaceDetector;
+	private final FaceDetectorFacade mFaceDetector;
 
 	public FaceDetectionTask(@NonNull Context context, @Nullable FaceDetectionDelegate delegate)
 	{
 		mDelegate = new WeakReference<>(delegate);
-		mFaceDetector = new FaceDetectorHelper(context);
+		mFaceDetector = new FaceDetectorFacade(context);
 	}
 
 	@Override

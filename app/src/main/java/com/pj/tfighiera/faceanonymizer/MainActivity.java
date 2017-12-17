@@ -1,12 +1,9 @@
 package com.pj.tfighiera.faceanonymizer;
 
-import com.pj.tfighiera.faceanonymizer.model.ImageModel;
-import com.pj.tfighiera.faceanonymizer.presenter.tasks.AnonymizerTask;
-import com.pj.tfighiera.faceanonymizer.presenter.tasks.FaceDetectionTask;
+import com.pj.tfighiera.faceanonymizer.presenter.MainPresenter;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -14,9 +11,6 @@ import android.support.v7.widget.Toolbar;
 public class MainActivity extends AppCompatActivity implements MainPresenter.Delegate
 {
 	private static final int REQUEST_IMAGE_CAPTURE = 1234;
-	@Nullable
-	AnonymizerTask mAnonymizerTask;
-	@NonNull
 	private MainPresenter mMainPresenter;
 
 	@Override
@@ -26,10 +20,7 @@ public class MainActivity extends AppCompatActivity implements MainPresenter.Del
 		setContentView(R.layout.activity_main);
 		setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
 		mMainPresenter = new MainPresenter(this, this);
-		if (savedInstanceState != null)
-		{
-			restoreValues(savedInstanceState);
-		}
+		restoreValues(savedInstanceState);
 	}
 
 	@Override
@@ -39,17 +30,11 @@ public class MainActivity extends AppCompatActivity implements MainPresenter.Del
 		mMainPresenter.save(outState);
 	}
 
-	private void restoreValues(Bundle savedInstanceState)
+	private void restoreValues(@Nullable Bundle savedInstanceState)
 	{
-		mMainPresenter.restore(this, savedInstanceState);
-	}
-
-	private void cancelTask()
-	{
-		if (mAnonymizerTask != null)
+		if (savedInstanceState != null)
 		{
-			mAnonymizerTask.cancel(true);
-			mAnonymizerTask = null;
+			mMainPresenter.restore(this, savedInstanceState);
 		}
 	}
 
@@ -57,7 +42,6 @@ public class MainActivity extends AppCompatActivity implements MainPresenter.Del
 	protected void onDestroy()
 	{
 		mMainPresenter.destroy();
-		cancelTask();
 		super.onDestroy();
 	}
 
@@ -66,10 +50,7 @@ public class MainActivity extends AppCompatActivity implements MainPresenter.Del
 	{
 		if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK)
 		{
-			ImageModel model = new ImageModel(this, data.getData());
-			mMainPresenter.updateModel(model);
-			mMainPresenter.OnStartFaceDetection();
-			new FaceDetectionTask(MainActivity.this, mMainPresenter).execute(model.getBitmap());
+			mMainPresenter.setNewImageUri(data.getData());
 		}
 	}
 
@@ -79,18 +60,5 @@ public class MainActivity extends AppCompatActivity implements MainPresenter.Del
 		Intent photoPickerIntent = new Intent(Intent.ACTION_PICK);
 		photoPickerIntent.setType("image/*");
 		startActivityForResult(photoPickerIntent, REQUEST_IMAGE_CAPTURE);
-	}
-
-	@Override
-	public void startDetectionTask(@NonNull ImageModel model)
-	{
-		new FaceDetectionTask(this, mMainPresenter).execute(model.getBitmap());
-	}
-
-	@Override
-	public void anonymizePhoto(@NonNull ImageModel model)
-	{
-		mAnonymizerTask = new AnonymizerTask(MainActivity.this, mMainPresenter);
-		mAnonymizerTask.execute(model.getBitmap());
 	}
 }

@@ -10,12 +10,12 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 /**
- * //TODO : Add a class header comments
+ * Model containing information about an image
  *
  * created on 15/09/2017
  *
  * @author thibaultfighiera
- * @version //TODO : add version
+ * @version 1.0
  */
 public class ImageModel
 {
@@ -29,25 +29,11 @@ public class ImageModel
 
 	public ImageModel(@NonNull Context context, @Nullable Uri imageUri)
 	{
-		if(imageUri != null)
+		if (imageUri != null)
 		{
 			mImageUri = imageUri;
 			mBitmap = ImageUtils.openBitmap(context, imageUri);
 		}
-	}
-
-	public int getWidth()
-	{
-		return mBitmap == null
-		       ? 0
-		       : mBitmap.getWidth();
-	}
-
-	public int getHeight()
-	{
-		return mBitmap == null
-		       ? 0
-		       : mBitmap.getHeight();
 	}
 
 	@Nullable
@@ -61,18 +47,22 @@ public class ImageModel
 		mBitmap = bitmap;
 	}
 
-	public void save(Bundle outState)
+	public void save(@NonNull Bundle outState)
 	{
 		outState.putParcelable(SAVED_PHOTO, mImageUri);
 		outState.putInt(SAVED_FACE_COUNT, mCount);
 	}
 
-	@NonNull
+	@Nullable
 	public static ImageModel restore(Context context, Bundle savedInstanceState)
 	{
+		ImageModel imageModel = null;
 		Uri imageUri = savedInstanceState.getParcelable(SAVED_PHOTO);
-		ImageModel imageModel = new ImageModel(context, imageUri);
-		imageModel.mCount = savedInstanceState.getInt(SAVED_FACE_COUNT);
+		if (imageUri != null)
+		{
+			imageModel = new ImageModel(context, imageUri);
+			imageModel.mCount = savedInstanceState.getInt(SAVED_FACE_COUNT);
+		}
 		return imageModel;
 	}
 

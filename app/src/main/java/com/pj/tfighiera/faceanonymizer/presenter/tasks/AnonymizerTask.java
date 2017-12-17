@@ -4,7 +4,7 @@ import com.google.android.gms.vision.face.Face;
 
 import com.pj.tfighiera.faceanonymizer.App;
 import com.pj.tfighiera.faceanonymizer.helpers.Blurrer;
-import com.pj.tfighiera.faceanonymizer.helpers.FaceDetectorHelper;
+import com.pj.tfighiera.faceanonymizer.helpers.FaceDetectorFacade;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -17,22 +17,24 @@ import android.util.SparseArray;
 import java.lang.ref.WeakReference;
 
 /**
+ * Anonymize Face task on an a given Bitmap
+ *
  * created on 21/07/2017
  *
  * @author tfi
+ * @version 1.0
  */
-
 public class AnonymizerTask extends AsyncTask<Bitmap, Void, Bitmap>
 {
 	@NonNull
-	private final FaceDetectorHelper mFaceDetector;
+	private final FaceDetectorFacade mFaceDetector;
 	@Nullable
 	private final WeakReference<AnonymizerDelegate> mAnonymizerDelegate;
 
 	public AnonymizerTask(@NonNull Context context, @Nullable AnonymizerDelegate anonymizerDelegate)
 	{
 		mAnonymizerDelegate = new WeakReference<>(anonymizerDelegate);
-		mFaceDetector = new FaceDetectorHelper(context);
+		mFaceDetector = new FaceDetectorFacade(context);
 	}
 
 	@Nullable

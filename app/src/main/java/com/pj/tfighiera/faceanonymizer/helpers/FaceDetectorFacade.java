@@ -11,16 +11,17 @@ import android.support.annotation.WorkerThread;
 import android.util.SparseArray;
 
 /**
+ * Face detector Facade
  * created on 21/07/2017
  *
  * @author tfi
  */
-public class FaceDetectorHelper
+public class FaceDetectorFacade
 {
 	@NonNull
 	private final FaceDetector mFaceDetector;
 
-	public FaceDetectorHelper(@NonNull Context context)
+	public FaceDetectorFacade(@NonNull Context context)
 	{
 		mFaceDetector = new FaceDetector.Builder(context).setMode(FaceDetector.ACCURATE_MODE)
 		                                                 .setLandmarkType(FaceDetector.ALL_LANDMARKS)

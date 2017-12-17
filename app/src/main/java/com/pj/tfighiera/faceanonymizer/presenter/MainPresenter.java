@@ -1,64 +1,55 @@
-package com.pj.tfighiera.faceanonymizer;
+package com.pj.tfighiera.faceanonymizer.presenter;
 
+import com.pj.tfighiera.faceanonymizer.R;
+import com.pj.tfighiera.faceanonymizer.helpers.ImageUtils;
 import com.pj.tfighiera.faceanonymizer.model.ImageModel;
 import com.pj.tfighiera.faceanonymizer.presenter.tasks.AnonymizerTask;
 import com.pj.tfighiera.faceanonymizer.presenter.tasks.FaceDetectionTask;
+import com.pj.tfighiera.faceanonymizer.view.MainViewHolder;
 
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.Matrix;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.view.View;
-import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.TextView;
 
-import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 
 /**
- * //TODO : Add a class header comments
+ * Manage View Model and anonymizing tasks
  *
  * created on 15/09/2017
  *
  * @author thibaultfighiera
- * @version //TODO : add version
+ * @version 1.0
  */
 public class MainPresenter implements FaceDetectionTask.FaceDetectionDelegate, AnonymizerTask.AnonymizerDelegate
 {
-	@BindView(R.id.imgview)
-	ImageView mImageView;
-	@BindView(R.id.title)
-	TextView mTitleView;
-	@Nullable
-	@BindView(R.id.rotateLeftButton)
-	ImageView mImageLeftRotate;
-	@Nullable
-	@BindView(R.id.rotateRightButton)
-	ImageView mImageRigthRotate;
-	@BindView(R.id.button)
-	Button mProcessButton;
 	@Nullable
 	private ProgressDialog mDialog;
+	@NonNull
+	private final MainViewHolder mMainViewHolder;
+	@NonNull
 	private Delegate mDelegate;
 	@Nullable
 	private ImageModel mImageModel;
+	@Nullable
+	private AsyncTask mCurrentTask;
+	@NonNull
+	private final Context mContext;
 
 	public MainPresenter(@NonNull Activity activity, @NonNull Delegate delegate)
 	{
 		ButterKnife.bind(this, activity);
+		mMainViewHolder = new MainViewHolder(activity);
 		mDelegate = delegate;
-	}
-
-	private void setCountView(int count)
-	{
-		mTitleView.setText(mTitleView.getResources()
-		                             .getQuantityString(R.plurals.faces, count, count));
+		mContext = activity;
 	}
 
 	@OnClick(R.id.imgview)
@@ -77,12 +68,10 @@ public class MainPresenter implements FaceDetectionTask.FaceDetectionDelegate, A
 		float degrees = view.getId() == R.id.rotateRightButton
 		                ? 90
 		                : -90;
-		Matrix matrix = new Matrix();
-		matrix.postRotate(degrees);
-		Bitmap bitmap = Bitmap.createBitmap(mImageModel.getBitmap(), 0, 0, mImageModel.getWidth(), mImageModel.getHeight(), matrix, true);
+		Bitmap bitmap = ImageUtils.rotate(mImageModel.getBitmap(), degrees);
 		mImageModel.setBitmap(bitmap);
-		mImageView.setImageBitmap(bitmap);
-		mDelegate.startDetectionTask(mImageModel);
+		mMainViewHolder.setImage(bitmap);
+		startFaceDetection();
 	}
 
 	@OnClick(R.id.button)
@@ -92,31 +81,23 @@ public class MainPresenter implements FaceDetectionTask.FaceDetectionDelegate, A
 		{
 			return;
 		}
-		showLoadingDialog();
-		mDelegate.anonymizePhoto(mImageModel);
+		anonymizePhoto();
 	}
 
-	void updateModel(@Nullable ImageModel model)
+	private void updateModel(@Nullable ImageModel model)
 	{
 		mImageModel = model;
 		if (model != null)
 		{
 			Bitmap bitmap = model.getBitmap();
-			setImage(bitmap);
-			setCountView(mImageModel.getCount());
-			mProcessButton.setEnabled(bitmap != null);
-			if (mImageLeftRotate != null && mImageRigthRotate != null)
-			{
-				mImageRigthRotate.setEnabled(bitmap != null);
-				mImageLeftRotate.setEnabled(bitmap != null);
-			}
+			mMainViewHolder.setImage(bitmap);
+			mMainViewHolder.setButtonsEnabled(bitmap != null);
 		}
 	}
 
 	private void showLoadingDialog()
 	{
-		Context context = mImageView.getContext();
-		mDialog = ProgressDialog.show(context, "", context.getString(R.string.loading), true);
+		mDialog = ProgressDialog.show(mContext, "", mContext.getString(R.string.loading), true);
 	}
 
 	private void hideLoadingDialog()
@@ -130,8 +111,11 @@ public class MainPresenter implements FaceDetectionTask.FaceDetectionDelegate, A
 	@Override
 	public void onFaceDetected(int count)
 	{
-		setCountView(count);
-		mImageModel.setCount(count);
+		if (mImageModel != null)
+		{
+			mImageModel.setCount(count);
+		}
+		mMainViewHolder.setCountLabel(count);
 		hideLoadingDialog();
 	}
 
@@ -146,19 +130,33 @@ public class MainPresenter implements FaceDetectionTask.FaceDetectionDelegate, A
 		hideLoadingDialog();
 	}
 
-	private void setImage(@Nullable Bitmap bitmap)
-	{
-		mImageView.setImageBitmap(bitmap);
-	}
-
 	public void destroy()
 	{
+		if (mCurrentTask != null)
+		{
+			mCurrentTask.cancel(true);
+			mCurrentTask = null;
+		}
 		hideLoadingDialog();
 	}
 
-	public void OnStartFaceDetection()
+	private void startFaceDetection()
 	{
-		showLoadingDialog();
+		startTask(new FaceDetectionTask(mContext, this));
+	}
+
+	private void anonymizePhoto()
+	{
+		startTask(new AnonymizerTask(mContext, this));
+	}
+
+	private void startTask(@NonNull AsyncTask<Bitmap, ?, ?> task)
+	{
+		if (mImageModel != null)
+		{
+			showLoadingDialog();
+			mCurrentTask = task.execute(mImageModel.getBitmap());
+		}
 	}
 
 	public void save(@NonNull Bundle outState)
@@ -172,14 +170,23 @@ public class MainPresenter implements FaceDetectionTask.FaceDetectionDelegate, A
 	public void restore(@NonNull Context context, @NonNull Bundle savedInstanceState)
 	{
 		updateModel(ImageModel.restore(context, savedInstanceState));
+		if (mImageModel != null)
+		{
+			mMainViewHolder.setCountLabel(mImageModel.getCount());
+		}
 	}
 
-	interface Delegate
+	public void setNewImageUri(@Nullable Uri image)
+	{
+		if (image != null)
+		{
+			updateModel(new ImageModel(mContext, image));
+			startFaceDetection();
+		}
+	}
+
+	public interface Delegate
 	{
 		void startPhotoPicker();
-
-		void startDetectionTask(@NonNull ImageModel bitmap);
-
-		void anonymizePhoto(@NonNull ImageModel bitmap);
 	}
 }
