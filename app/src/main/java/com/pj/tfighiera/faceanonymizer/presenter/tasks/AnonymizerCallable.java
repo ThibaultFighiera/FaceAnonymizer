@@ -9,12 +9,11 @@ import com.pj.tfighiera.faceanonymizer.helpers.FaceDetectorFacade;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.os.AsyncTask;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.SparseArray;
 
-import java.lang.ref.WeakReference;
+import java.util.concurrent.Callable;
 
 /**
  * Anonymize Face task on an a given Bitmap
@@ -24,17 +23,28 @@ import java.lang.ref.WeakReference;
  * @author tfi
  * @version 1.0
  */
-public class AnonymizerTask extends AsyncTask<Bitmap, Void, Bitmap>
+public class AnonymizerCallable implements Callable<Bitmap>
 {
 	@NonNull
 	private final FaceDetectorFacade mFaceDetector;
-	@Nullable
-	private final WeakReference<AnonymizerDelegate> mAnonymizerDelegate;
+	@NonNull
+	private Bitmap mBitmap;
 
-	public AnonymizerTask(@NonNull Context context, @Nullable AnonymizerDelegate anonymizerDelegate)
+	public AnonymizerCallable(@NonNull Context context, @NonNull Bitmap bitmap)
 	{
-		mAnonymizerDelegate = new WeakReference<>(anonymizerDelegate);
+		mBitmap = bitmap;
 		mFaceDetector = new FaceDetectorFacade(context);
+	}
+
+	@Override
+	public Bitmap call() throws Exception
+	{
+		if (!mFaceDetector.isOperational())
+		{
+			return mBitmap;
+		}
+		SparseArray<Face> faces = mFaceDetector.detect(mBitmap);
+		return createFaceMask(App.getContext(), faces, mBitmap);
 	}
 
 	@Nullable
@@ -56,32 +66,6 @@ public class AnonymizerTask extends AsyncTask<Bitmap, Void, Bitmap>
 			}
 		}
 		return maskedBitmap;
-	}
-
-	@Override
-	protected Bitmap doInBackground(@NonNull Bitmap... bitmaps)
-	{
-		if (!mFaceDetector.isOperational())
-		{
-			return bitmaps[0];
-		}
-		SparseArray<Face> faces = mFaceDetector.detect(bitmaps[0]);
-		return createFaceMask(App.getContext(), faces, bitmaps[0]);
-	}
-
-	@Override
-	protected void onPostExecute(@NonNull Bitmap mask)
-	{
-		if (mAnonymizerDelegate != null && mAnonymizerDelegate.get() != null)
-		{
-			mAnonymizerDelegate.get()
-			                   .onAnonymizationSuccess(mask);
-		}
-	}
-
-	public interface AnonymizerDelegate
-	{
-		void onAnonymizationSuccess(@NonNull Bitmap mask);
 	}
 }
 

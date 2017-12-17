@@ -3,8 +3,8 @@ package com.pj.tfighiera.faceanonymizer.presenter;
 import com.pj.tfighiera.faceanonymizer.R;
 import com.pj.tfighiera.faceanonymizer.helpers.ImageUtils;
 import com.pj.tfighiera.faceanonymizer.model.ImageModel;
-import com.pj.tfighiera.faceanonymizer.presenter.tasks.AnonymizerTask;
-import com.pj.tfighiera.faceanonymizer.presenter.tasks.FaceDetectionTask;
+import com.pj.tfighiera.faceanonymizer.presenter.tasks.AnonymizerCallable;
+import com.pj.tfighiera.faceanonymizer.presenter.tasks.FaceCountCallable;
 import com.pj.tfighiera.faceanonymizer.view.MainViewHolder;
 
 import android.app.Activity;
@@ -12,7 +12,6 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -20,6 +19,11 @@ import android.view.View;
 
 import butterknife.ButterKnife;
 import butterknife.OnClick;
+import io.reactivex.Single;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
+import io.reactivex.schedulers.Schedulers;
 
 /**
  * Manage View Model and anonymizing tasks
@@ -29,7 +33,7 @@ import butterknife.OnClick;
  * @author thibaultfighiera
  * @version 1.0
  */
-public class MainPresenter implements FaceDetectionTask.FaceDetectionDelegate, AnonymizerTask.AnonymizerDelegate
+public class MainPresenter
 {
 	@Nullable
 	private ProgressDialog mDialog;
@@ -39,10 +43,10 @@ public class MainPresenter implements FaceDetectionTask.FaceDetectionDelegate, A
 	private Delegate mDelegate;
 	@Nullable
 	private ImageModel mImageModel;
-	@Nullable
-	private AsyncTask mCurrentTask;
 	@NonNull
 	private final Context mContext;
+	@Nullable
+	private Disposable mDisposableTask;
 
 	public MainPresenter(@NonNull Activity activity, @NonNull Delegate delegate)
 	{
@@ -108,54 +112,54 @@ public class MainPresenter implements FaceDetectionTask.FaceDetectionDelegate, A
 		}
 	}
 
-	@Override
-	public void onFaceDetected(int count)
-	{
-		if (mImageModel != null)
-		{
-			mImageModel.setCount(count);
-		}
-		mMainViewHolder.setCountLabel(count);
-		hideLoadingDialog();
-	}
-
-	@Override
-	public void onAnonymizationSuccess(@NonNull Bitmap bitmap)
-	{
-		if (mImageModel != null)
-		{
-			mImageModel.setBitmap(bitmap);
-			updateModel(mImageModel);
-		}
-		hideLoadingDialog();
-	}
-
 	public void destroy()
 	{
-		if (mCurrentTask != null)
+		if (mDisposableTask != null && !mDisposableTask.isDisposed())
 		{
-			mCurrentTask.cancel(true);
-			mCurrentTask = null;
+			mDisposableTask.dispose();
 		}
 		hideLoadingDialog();
 	}
 
 	private void startFaceDetection()
 	{
-		startTask(new FaceDetectionTask(mContext, this));
+		if (mImageModel != null)
+		{
+			showLoadingDialog();
+			mDisposableTask = Single.fromCallable(new FaceCountCallable(mContext, mImageModel.getBitmap()))
+			                        .subscribeOn(Schedulers.computation())
+			                        .observeOn(AndroidSchedulers.mainThread())
+			                        .subscribe(new Consumer<Integer>()
+			                        {
+				                        @Override
+				                        public void accept(@NonNull Integer count) throws Exception
+				                        {
+					                        mImageModel.setCount(count);
+					                        mMainViewHolder.setCountLabel(count);
+					                        hideLoadingDialog();
+				                        }
+			                        });
+		}
 	}
 
 	private void anonymizePhoto()
 	{
-		startTask(new AnonymizerTask(mContext, this));
-	}
-
-	private void startTask(@NonNull AsyncTask<Bitmap, ?, ?> task)
-	{
-		if (mImageModel != null)
+		if (mImageModel != null && mImageModel.getBitmap() != null)
 		{
 			showLoadingDialog();
-			mCurrentTask = task.execute(mImageModel.getBitmap());
+			mDisposableTask = Single.fromCallable(new AnonymizerCallable(mContext, mImageModel.getBitmap()))
+			                        .subscribeOn(Schedulers.computation())
+			                        .observeOn(AndroidSchedulers.mainThread())
+			                        .subscribe(new Consumer<Bitmap>()
+			                        {
+				                        @Override
+				                        public void accept(@NonNull Bitmap bitmap) throws Exception
+				                        {
+					                        mImageModel.setBitmap(bitmap);
+					                        updateModel(mImageModel);
+					                        hideLoadingDialog();
+				                        }
+			                        });
 		}
 	}
 
