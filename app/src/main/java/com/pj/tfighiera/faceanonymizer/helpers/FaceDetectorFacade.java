@@ -6,8 +6,9 @@ import com.google.android.gms.vision.face.FaceDetector;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.support.annotation.NonNull;
-import android.support.annotation.WorkerThread;
+import androidx.annotation.NonNull;
+import androidx.annotation.WorkerThread;
+
 import android.util.SparseArray;
 
 /**
