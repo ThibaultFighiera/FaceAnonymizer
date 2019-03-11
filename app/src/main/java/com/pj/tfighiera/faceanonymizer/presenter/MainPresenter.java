@@ -13,16 +13,15 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.view.View;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 import io.reactivex.Single;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
-import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
 
 /**
@@ -129,16 +128,11 @@ public class MainPresenter
 			mDisposableTask = Single.fromCallable(new FaceCountCallable(mContext, mImageModel.getBitmap()))
 			                        .subscribeOn(Schedulers.computation())
 			                        .observeOn(AndroidSchedulers.mainThread())
-			                        .subscribe(new Consumer<Integer>()
-			                        {
-				                        @Override
-				                        public void accept(@NonNull Integer count) throws Exception
-				                        {
-					                        mImageModel.setCount(count);
-					                        mMainViewHolder.setCountLabel(count);
-					                        hideLoadingDialog();
-				                        }
-			                        });
+			                        .subscribe(count -> {
+										mImageModel.setCount(count);
+										mMainViewHolder.setCountLabel(count);
+										hideLoadingDialog();
+									});
 		}
 	}
 
@@ -150,16 +144,11 @@ public class MainPresenter
 			mDisposableTask = Single.fromCallable(new AnonymizerCallable(mContext, mImageModel.getBitmap()))
 			                        .subscribeOn(Schedulers.computation())
 			                        .observeOn(AndroidSchedulers.mainThread())
-			                        .subscribe(new Consumer<Bitmap>()
-			                        {
-				                        @Override
-				                        public void accept(@NonNull Bitmap bitmap) throws Exception
-				                        {
-					                        mImageModel.setBitmap(bitmap);
-					                        updateModel(mImageModel);
-					                        hideLoadingDialog();
-				                        }
-			                        });
+			                        .subscribe(bitmap -> {
+										mImageModel.setBitmap(bitmap);
+										updateModel(mImageModel);
+										hideLoadingDialog();
+									});
 		}
 	}
 

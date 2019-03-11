@@ -1,15 +1,15 @@
 package com.pj.tfighiera.faceanonymizer.view;
 
-import com.pj.tfighiera.faceanonymizer.R;
-
 import android.app.Activity;
 import android.graphics.Bitmap;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.pj.tfighiera.faceanonymizer.R;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 

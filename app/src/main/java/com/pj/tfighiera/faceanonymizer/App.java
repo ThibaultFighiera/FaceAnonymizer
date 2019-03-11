@@ -2,7 +2,7 @@ package com.pj.tfighiera.faceanonymizer;
 
 import android.app.Application;
 import android.content.Context;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 public class App extends Application
 {
